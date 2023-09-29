@@ -21,11 +21,11 @@ pub enum DownloadMethod {
 }
 
 /// Adds a torrent based on the given method, name, and path
-pub async fn add(method: DownloadMethod, name: &str, path: String) -> Result<(), Box<dyn std::error::Error>> {
+pub fn add(method: DownloadMethod, name: &str, path: &str) -> Result<(), Box<dyn std::error::Error>> {
     match method {
         DownloadMethod::QBitTorrent => {
             wei_run::run("wei-qbittorrent",
-                vec!["add".to_owned(), name.to_owned(), path]
+                vec!["add".to_owned(), name.to_owned(), path.to_owned()]
             )?;
         }
         // Handle other methods as needed
@@ -36,7 +36,7 @@ pub async fn add(method: DownloadMethod, name: &str, path: String) -> Result<(),
 
 /// Lists all torrents or a specific torrent based on the given method and name
 /// Returns information such as the download method, hash, name, download speed, progress, save path, status, current size, and total size
-pub async fn list(method: DownloadMethod, name: &str) -> Result<String, Box<dyn std::error::Error>> {
+pub fn list(method: DownloadMethod, name: &str) -> Result<String, Box<dyn std::error::Error>> {
     match method {
         DownloadMethod::QBitTorrent => {
             return wei_run::run(
@@ -53,7 +53,7 @@ pub async fn list(method: DownloadMethod, name: &str) -> Result<String, Box<dyn 
 
 /// Deletes a torrent based on the given method and name
 /// Options include deleting the file, or just the torrent
-pub async fn del(method: DownloadMethod, name: &str) -> Result<(), Box<dyn std::error::Error>> {
+pub fn del(method: DownloadMethod, name: &str) -> Result<(), Box<dyn std::error::Error>> {
     match method {
         DownloadMethod::QBitTorrent => {
             wei_run::run(
