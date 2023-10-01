@@ -21,17 +21,15 @@ pub enum DownloadMethod {
 }
 
 /// Adds a torrent based on the given method, name, and path
-pub fn add(method: DownloadMethod, name: &str, path: &str) -> Result<(), Box<dyn std::error::Error>> {
+pub fn add(method: DownloadMethod, name: &str, path: &str) -> Result<String, Box<dyn std::error::Error>> {
     match method {
         DownloadMethod::QBitTorrent => {
-            wei_run::run("wei-qbittorrent",
+            return wei_run::run("wei-qbittorrent",
                 vec!["add".to_owned(), name.to_owned(), path.to_owned()]
-            )?;
+            );
         }
         // Handle other methods as needed
     }
-
-    Ok(())
 }
 
 /// Lists all torrents or a specific torrent based on the given method and name
@@ -53,19 +51,17 @@ pub fn list(method: DownloadMethod, name: &str) -> Result<String, Box<dyn std::e
 
 /// Deletes a torrent based on the given method and name
 /// Options include deleting the file, or just the torrent
-pub fn del(method: DownloadMethod, name: &str) -> Result<(), Box<dyn std::error::Error>> {
+pub fn del(method: DownloadMethod, name: &str) -> Result<String, Box<dyn std::error::Error>> {
     match method {
         DownloadMethod::QBitTorrent => {
-            wei_run::run(
+            return wei_run::run(
                 "wei-qbittorrent", 
                 vec![
                     "del".to_owned(),
                     name.to_owned()
                 ]
-            )?;
+            );
         }
         // Handle other methods as needed
     }
-
-    Ok(())
 }
