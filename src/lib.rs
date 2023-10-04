@@ -25,7 +25,7 @@ pub fn add(method: DownloadMethod, name: &str, path: &str) -> Result<String, Box
     match method {
         DownloadMethod::QBitTorrent => {
             return wei_run::run("wei-qbittorrent",
-                vec!["add".to_owned(), name.to_owned(), path.to_owned()]
+                vec!["add", name, path]
             );
         }
         // Handle other methods as needed
@@ -40,8 +40,8 @@ pub fn list(method: DownloadMethod, name: &str) -> Result<String, Box<dyn std::e
             return wei_run::run(
                 "wei-qbittorrent", 
                 vec![
-                    "list".to_owned(),
-                    name.to_owned()
+                    "list",
+                    name
                 ]
             );
         }
@@ -57,8 +57,8 @@ pub fn del(method: DownloadMethod, name: &str) -> Result<String, Box<dyn std::er
             return wei_run::run(
                 "wei-qbittorrent", 
                 vec![
-                    "del".to_owned(),
-                    name.to_owned()
+                    "del",
+                    name
                 ]
             );
         }
