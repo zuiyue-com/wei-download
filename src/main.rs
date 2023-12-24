@@ -1,5 +1,7 @@
 use serde_json::{Value, json};
 
+mod action;
+
 #[cfg(target_os = "windows")]
 static DATA_1: &'static [u8] = include_bytes!("../../wei-release/windows/qbittorrent/qbittorrent.exe");
 
@@ -12,7 +14,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     wei_env::bin_init("wei-download");
     let args: Vec<String> = std::env::args().collect();
 
-    
     let mut command = "";
 
     if args.len() > 1 {
@@ -30,7 +31,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 error("args error".to_string());
                 return Ok(());
             }
-        
             let body = json!({
                 "jsonrpc":"2.0",
                 "method":"aria2.addUri",
@@ -39,10 +39,34 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     "dir": args[3].clone()
                 }]
             });
-
             send(body);
-        },
+        }
+        "torrent" => {
+            if args.len() < 4 {
+                error("args error".to_string());
+                return Ok(());
+            }
+
+            let data = base64::encode(std::fs::read(args[2].clone())?);
+
+            let body = json!({
+                "jsonrpc":"2.0",
+                "method":"aria2.addTorrent",
+                "id": id,
+                "params":[
+                    token(),
+                    data,
+                    [],
+                    {"dir": args[3].clone()}
+                ]
+            });
+            send(body);
+        }
         "list" => {
+            let mut name = "".to_string();
+            if args.len() > 2 {
+                name = args[2].clone();
+            }
             let body = json!({
                 "jsonrpc":"2.0",
                 "method":"aria2.tellActive",
@@ -50,13 +74,16 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 "params":[
                     token(),
                     [
-                        "gid", "status", "bittorrent"
+                        "gid","status","bittorrent","dir","files",
+                        "totalLength","completedLength",
+                        "uploadSpeed","downloadSpeed","connections",
+                        "numSeeders","seeder","status",
+                        "errorCode","verifiedLength","verifyIntegrityPending"
                     ]
                 ]
             });
-
-            send(body);
-        },
+            action::list(body, name)?;
+        }
         "stop" => {
             if args.len() < 3 {
                 error("args error".to_string());
@@ -92,7 +119,47 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             });
 
             send(body);
-        },
+        }
+        "resume" => {
+            if args.len() < 3 {
+                error("args error".to_string());
+                return Ok(());
+            }
+
+            let body = json!({
+                "jsonrpc":"2.0",
+                "method":"aria2.unpause",
+                "id": id,
+                "params":[
+                    token(),
+                    args[2].clone()
+                ]
+            });
+
+            send(body);
+        }
+        "resume_all" => {
+            let body = json!({
+                "jsonrpc":"2.0",
+                "method":"aria2.unpauseAll",
+                "id": id,
+                "params":[
+                    token()
+                ]
+            });
+            send(body);
+        }
+        "quit" => {
+            let body = json!({
+                "jsonrpc":"2.0",
+                "method": "aria2.shutdown",
+                "id": id,
+                "params":[
+                    token()
+                ]
+            });
+            send(body);
+        }
         "test" => {
             let body = json!({
                 "jsonrpc":"2.0",
@@ -103,37 +170,34 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     args[3].clone()
                 ]
             });
-
             send(body);
-        }
-        // "list" => {
-        //     let body = json!({
-        //         "jsonrpc":"2.0",
-        //         "method":"aria2.tellActive",
-        //         "id":"abc",
-        //         "params":[
-        //             token(),
-        //             [
-        //                 "gid","totalLength","completedLength",
-        //                 "uploadSpeed","downloadSpeed","connections",
-        //                 "numSeeders","seeder","status",
-        //                 "errorCode","verifiedLength","verifyIntegrityPending"
-        //             ]
-        //         ]
-        //     });
-        //     send(body);
-        // },
-        "quit" => {
-            
         }
         "help" => {
             help();
         }
         _ => {
-            
+            start()?;
         }
     }
 
+    Ok(())
+}
+
+fn start() -> Result<(), Box<dyn std::error::Error>> {
+    use single_instance::SingleInstance;
+    let instance = SingleInstance::new("wei-download").unwrap();
+    if !instance.is_single() { 
+        std::process::exit(1);
+    };
+
+    match wei_run::command("./aria2/aria2c.exe", vec!["--conf-path=./aria2/aria2.conf"]) {
+        Ok(data) => {
+            success(json!(data));
+        }
+        Err(e) => {
+            error(e.to_string());
+        }
+    };
     Ok(())
 }
 
@@ -150,11 +214,11 @@ fn send(body: Value) {
     }
 }
 
-fn token() -> String {
+pub fn token() -> String {
     "token:abc123".to_string()
 }
 
-fn url() -> String {
+pub fn url() -> String {
     "http://localhost:6800/jsonrpc".to_string()
 }
 
@@ -166,7 +230,7 @@ fn help() {
     }).to_string());
 }
 
-fn success(data: Value) {
+pub fn success(data: Value) {
     print!("{}", json!({
         "code": 200,
         "message": "success",
@@ -174,7 +238,7 @@ fn success(data: Value) {
     }).to_string());
 }
 
-fn error(message: String) {
+pub fn error(message: String) {
     print!("{}", json!({
         "code": 400,
         "message": message
