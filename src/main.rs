@@ -39,7 +39,19 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     "dir": args[3].clone()
                 }]
             });
-            send(body);
+
+            if args.len() == 6 {
+                match ureq::post(&url()).send_json(body) {
+                    Ok(_) => {}
+                    Err(e) => {
+                        error(e.to_string());
+                        return Ok(());
+                    }
+                }
+                action::follow_add(args[4].clone(),args[5].clone())?;
+            } else {
+                send(body);
+            }
         }
         "torrent" => {
             if args.len() < 4 {
