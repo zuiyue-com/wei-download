@@ -31,6 +31,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 error("args error".to_string());
                 return Ok(());
             }
+            
             let body = json!({
                 "jsonrpc":"2.0",
                 "method":"aria2.addUri",
@@ -183,6 +184,39 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 ]
             });
             send(body);
+        }
+        "file_list" => {
+            if args.len() < 3 {
+                error("args error".to_string());
+                return Ok(());
+            }
+            let path = args[2].clone();
+            if std::path::Path::new(&path).exists() {
+                let list = serde_json::from_str(&wei_hardware::get_file_info(path))?;
+                success(list);
+            } else {
+                error("file not exists".to_string());
+            }            
+        }
+        "file_delete" => {
+            if args.len() < 3 {
+                error("args error".to_string());
+                return Ok(());
+            }
+            let path = args[2].clone();
+            let path = std::path::Path::new(&path);
+            if path.exists() {
+                if path.is_file() {
+                    std::fs::remove_file(path)?;
+                    success(json!("file deleted"));
+                } else if path.is_dir() {
+                    std::fs::remove_dir_all(path)?;
+                    success(json!("dir deleted"));
+                }
+            } else {
+                error("file not exists".to_string());
+            }
+
         }
         "help" => {
             help();
