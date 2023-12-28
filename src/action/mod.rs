@@ -1,7 +1,6 @@
 use serde_json::{Value, json};
 
 pub fn list(body: Value, search_name: String) -> Result<(), Box<dyn std::error::Error>> {
-
     match ureq::post(&crate::url()).send_json(body) {
         Ok(res) => {
             let data = res.into_string()?;

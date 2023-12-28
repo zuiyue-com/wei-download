@@ -49,7 +49,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                         return Ok(());
                     }
                 }
-                action::follow_add(args[4].clone(),args[5].clone())?;
+                action::follow_add(args[5].clone(),args[4].clone())?;
             } else {
                 send(body);
             }
