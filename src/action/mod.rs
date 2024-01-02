@@ -9,6 +9,11 @@ pub fn list(body: Value, search_name: String) -> Result<(), Box<dyn std::error::
 
             for item in data["result"].as_array().unwrap() {
                 let gid = item["gid"].as_str().unwrap();
+
+                if item["bittorrent"].is_null() {
+                    continue;
+                }
+                
                 let bittorrent = item["bittorrent"].as_object().unwrap();
                 let info = bittorrent["info"].as_object().unwrap();
                 let name = info["name"].as_str().unwrap();

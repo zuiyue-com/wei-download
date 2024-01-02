@@ -1,3 +1,6 @@
+// #[macro_use]
+// extern crate wei_log;
+
 use serde_json::{Value, json};
 
 mod action;
