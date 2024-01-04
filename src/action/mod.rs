@@ -27,7 +27,7 @@ pub fn list(body: Value, search_name: String) -> Result<(), Box<dyn std::error::
                     continue;
                 }
 
-                data_new[gid] = json!({
+                data_new = json!({
                     "gid": gid,
                     "name": name,
                     "status": item["status"].as_str().unwrap(),
@@ -39,7 +39,7 @@ pub fn list(body: Value, search_name: String) -> Result<(), Box<dyn std::error::
                     "download_speed": item["downloadSpeed"].as_str().unwrap(),
                     "upload_speed": item["uploadSpeed"].as_str().unwrap(),
                     "dir": dir,
-                    // "files": item["files"].as_array().unwrap(),
+                    "files": item["files"].as_array().unwrap(),
                 });
 
             }
