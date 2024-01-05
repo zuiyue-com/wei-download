@@ -242,7 +242,7 @@ fn start() -> Result<(), Box<dyn std::error::Error>> {
     // 判断文件是否存在 ./aria2/aria2.session, 如果不存在则创建
     let path = std::path::Path::new("./aria2/aria2.session");
     if !path.exists() {
-        std::io::File::create(&path)?;
+        std::fs::File::create(&path)?;
     }
 
     match wei_run::command("./aria2/aria2c.exe", vec!["--conf-path=./aria2/aria2.conf"]) {
