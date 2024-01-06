@@ -1,6 +1,64 @@
 use serde_json::{Value, json};
 
-pub fn list(body: Value, search_name: String) -> Result<(), Box<dyn std::error::Error>> {
+pub fn list(search_name: String) -> Result<(), Box<dyn std::error::Error>> {
+    let body = json!({
+        "jsonrpc":"2.0",
+        "method":"aria2.tellActive",
+        "id": crate::id(),
+        "params":[
+            crate::token(),
+            [
+                "gid","status","bittorrent","dir","files",
+                "totalLength","completedLength",
+                "uploadSpeed","downloadSpeed","connections",
+                "numSeeders","seeder","status",
+                "errorCode","verifiedLength","verifyIntegrityPending"
+            ]
+        ]
+    });
+
+    match ureq::post(&crate::url()).send_json(body) {
+        Ok(res) => {
+            let data = res.into_string()?;
+            let data: Value = serde_json::from_str(&data)?;
+            let mut data_new: Value;
+
+            for item in data["result"].as_array().unwrap() {
+                data_new = list_data(item.clone())?;
+
+                if data_new["name"].as_str().unwrap_or("no_name") == &search_name {
+                    crate::success(data_new);
+                    return Ok(());
+                }
+            }
+
+            crate::success(json!({}));
+        }
+        Err(e) => {
+            crate::error(e.to_string());
+        }
+    }
+
+    Ok(())
+}
+
+pub fn list_all() -> Result<(), Box<dyn std::error::Error>> {
+    let body = json!({
+        "jsonrpc":"2.0",
+        "method":"aria2.tellActive",
+        "id": crate::id(),
+        "params":[
+            crate::token(),
+            [
+                "gid","status","bittorrent","dir","files",
+                "totalLength","completedLength",
+                "uploadSpeed","downloadSpeed","connections",
+                "numSeeders","seeder","status",
+                "errorCode","verifiedLength","verifyIntegrityPending"
+            ]
+        ]
+    });
+
     match ureq::post(&crate::url()).send_json(body) {
         Ok(res) => {
             let data = res.into_string()?;
@@ -8,40 +66,7 @@ pub fn list(body: Value, search_name: String) -> Result<(), Box<dyn std::error::
             let mut data_new:Value = json!({});
 
             for item in data["result"].as_array().unwrap() {
-                let gid = item["gid"].as_str().unwrap();
-
-                if item["bittorrent"].is_null() {
-                    continue;
-                }
-                
-                let bittorrent = item["bittorrent"].as_object().unwrap();
-                let info = bittorrent["info"].as_object().unwrap();
-                let name = info["name"].as_str().unwrap();
-                
-                let path = item["dir"].as_str().unwrap();
-                let path = format!("{}/{}", path, name);
-                let path = path.replace("\\", "/");
-                let dir = path.replace("//", "/");
-
-                if name.find(&search_name) == None {
-                    continue;
-                }
-
-                data_new = json!({
-                    "gid": gid,
-                    "name": name,
-                    "status": item["status"].as_str().unwrap(),
-                    "connections": item["connections"].as_str().unwrap(),
-                    "num_seeders": item["numSeeders"].as_str().unwrap(),
-                    "seeder": item["seeder"].as_str().unwrap(),
-                    "completed_length": item["completedLength"].as_str().unwrap(),
-                    "total_length": item["totalLength"].as_str().unwrap(),
-                    "download_speed": item["downloadSpeed"].as_str().unwrap(),
-                    "upload_speed": item["uploadSpeed"].as_str().unwrap(),
-                    "dir": dir,
-                    "files": item["files"].as_array().unwrap(),
-                });
-
+                data_new[item["gid"].as_str().unwrap()] = list_data(item.clone())?;
             }
 
             crate::success(data_new);
@@ -52,6 +77,44 @@ pub fn list(body: Value, search_name: String) -> Result<(), Box<dyn std::error::
     }
 
     Ok(())
+}
+
+pub fn list_data(item: Value) -> Result<Value, Box<dyn std::error::Error>> {
+    let gid = item["gid"].as_str().unwrap();
+
+    let name;
+
+    if !item["bittorrent"].is_null() {
+        let bittorrent = item["bittorrent"].as_object().unwrap();
+        let info = bittorrent["info"].as_object().unwrap();
+        name = info["name"].as_str().unwrap();
+    } else {
+        let path = item["files"][0]["path"].as_str().unwrap();
+        let path = std::path::Path::new(path);
+        name = path.file_name().unwrap().to_str().unwrap();
+    }
+    
+    let path = item["dir"].as_str().unwrap();
+    let path = format!("{}/{}", path, name);
+    let path = path.replace("\\", "/");
+    let dir = path.replace("//", "/");
+
+    let data = json!({
+        "gid": gid,
+        "name": name,
+        "status": item["status"].as_str().unwrap(),
+        "connections": item["connections"].as_str().unwrap(),
+        "num_seeders": item["numSeeders"].as_str().unwrap(),
+        "seeder": item["seeder"].as_str().unwrap(),
+        "completed_length": item["completedLength"].as_str().unwrap(),
+        "total_length": item["totalLength"].as_str().unwrap(),
+        "download_speed": item["downloadSpeed"].as_str().unwrap(),
+        "upload_speed": item["uploadSpeed"].as_str().unwrap(),
+        "dir": dir,
+        "files": item["files"].as_array().unwrap(),
+    });
+
+    Ok(data)
 }
 
 pub fn follow_add(url: String, search_name: String) -> Result<(), Box<dyn std::error::Error>> {

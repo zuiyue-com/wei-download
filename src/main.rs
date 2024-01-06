@@ -24,9 +24,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     // 使用std获取当前时间
-    let now = std::time::SystemTime::now();
-    let timestamp = now.duration_since(std::time::UNIX_EPOCH).unwrap().as_secs();
-    let id = format!("{}", timestamp);
+    let id = id();
 
     match command {
         "add" => {
@@ -83,22 +81,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             if args.len() > 2 {
                 name = args[2].clone();
             }
-            let body = json!({
-                "jsonrpc":"2.0",
-                "method":"aria2.tellActive",
-                "id": id,
-                "params":[
-                    token(),
-                    [
-                        "gid","status","bittorrent","dir","files",
-                        "totalLength","completedLength",
-                        "uploadSpeed","downloadSpeed","connections",
-                        "numSeeders","seeder","status",
-                        "errorCode","verifiedLength","verifyIntegrityPending"
-                    ]
-                ]
-            });
-            action::list(body, name)?;
+            action::list(name)?;
+        }
+        "list_all" => {
+            action::list_all()?;
         }
         "stop" => {
             if args.len() < 3 {
@@ -271,6 +257,12 @@ fn send(body: Value) {
 
 pub fn token() -> String {
     "token:abc123".to_string()
+}
+
+pub fn id() -> String {
+    let now = std::time::SystemTime::now();
+    let timestamp = now.duration_since(std::time::UNIX_EPOCH).unwrap().as_secs();
+    format!("{}", timestamp)
 }
 
 pub fn url() -> String {
