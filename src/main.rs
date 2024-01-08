@@ -42,7 +42,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 }]
             });
 
-            if args.len() == 6 {
+            if args.len() == 6 { // 上报进度给服务器
                 match ureq::post(&url()).send_json(body) {
                     Ok(_) => {}
                     Err(e) => {
@@ -110,17 +110,112 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 return Ok(());
             }
 
-            let body = json!({
-                "jsonrpc":"2.0",
-                "method":"aria2.forceRemove",
-                "id": id,
-                "params":[
-                    token(),
-                    args[2].clone()
-                ]
-            });
+            let data = wei_run::run("wei-download", vec!["list_all"])?;
 
-            send(body);
+            let data: Value = serde_json::from_str(&data).unwrap();
+            let data = data["data"].as_object().unwrap();
+
+            for (key, value) in data {
+                if key == &args[2] {
+                    let body = json!({
+                        "jsonrpc":"2.0",
+                        "method":"aria2.forceRemove",
+                        "id": id,
+                        "params":[
+                            token(),
+                            key
+                        ]
+                    });
+                    send(body);
+
+                    let files = value["files"].as_array().unwrap();
+                    for file in files {
+                        let path = file["path"].as_str().unwrap();
+                        match std::fs::remove_file(path) {
+                            Ok(_) => {}
+                            Err(_) => {}
+                        };
+                    }
+
+                    // 如果保存的种子只包含文件，不包含文件夹，则会删除错误的文件
+                    // let dir = value["dir"].as_str().unwrap();
+                    // match std::fs::remove_dir_all(dir) {
+                    //     Ok(_) => {}
+                    //     Err(_) => {}
+                    // };
+
+                    return Ok(());
+                }
+            }
+            error("not found".to_string());
+        }
+        "set-location" => {
+            if args.len() < 4 {
+                error("args error".to_string());
+                return Ok(());
+            }
+
+            let gid = &args[2];
+            let dir_new = &args[3];
+            
+            let data = wei_run::run("wei-download", vec!["list_all"])?;
+            let data: Value = serde_json::from_str(&data).unwrap();
+            let data = data["data"].as_object().unwrap();
+            let item;
+
+            if data.get(gid).is_none() {
+                error("not found".to_string());
+                return Ok(());
+            } else {
+                item = data[gid].clone();
+            }
+
+            
+            let completed_length = item["completed_length"].as_str().unwrap();
+            let total_length = item["total_length"].as_str().unwrap();
+
+            if completed_length != total_length {
+                error("not completed".to_string());
+                return Ok(());
+            }
+
+            let dir = item["dir"].as_str().unwrap();
+            let files = item["files"].as_array().unwrap();
+            for file in files {
+                let path = file["path"].as_str().unwrap();
+                let path_new = path.replace(dir, dir_new);
+
+                let path_dir = std::path::Path::new(&path_new);
+                // 获取path_new的上级目录
+                let path_dir = path_dir.parent().unwrap();
+                if !path_dir.exists() {
+                    match std::fs::create_dir_all(path_dir) {
+                        Ok(_) => {}
+                        Err(err) => {
+                            error(format!("create dir error: {}", err.to_string()));
+                            return Ok(());
+                        }
+                    };
+                }
+
+                match std::fs::rename(path, path_new) {
+                    Ok(_) => {}
+                    Err(err) => {
+                        error(format!("rename error: {}", err.to_string()));
+                        return Ok(());
+                    }
+                };
+            }
+
+            wei_run::run("wei-download", vec!["delete", gid])?;
+
+            // let info_hash = item["info_hash"].as_str().unwrap();
+            // if info_hash != "" {
+            //     let url = format!("magnet:?xt=urn:btih:{}", info_hash);
+            //     wei_run::run("wei-download", vec!["add", &url, dir_new])?;
+            // }
+
+            success(json!("success"));
         }
         "resume" => {
             if args.len() < 3 {
@@ -162,17 +257,41 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             });
             send(body);
         }
-        "test" => {
-            let body = json!({
-                "jsonrpc":"2.0",
-                "method":args[2].clone(),
-                "id": id,
-                "params":[
-                    token(),
-                    args[3].clone()
-                ]
-            });
-            send(body);
+        "check" => {
+            let gid = &args[2];
+            let data = wei_run::run("wei-download", vec!["list_all"])?;
+            // 列出所有下载的文件，比对文件的大小，如果文件大小不一致，则重新下载
+            let data: Value = serde_json::from_str(&data).unwrap();
+            let data = data["data"].as_object().unwrap();
+            let item;
+
+            if data.get(gid).is_none() {
+                error("not found".to_string());
+                return Ok(());
+            } else {
+                item = data[gid].clone();
+            }
+
+            let files = item["files"].as_array().unwrap();
+            for file in files {
+                let path = file["path"].as_str().unwrap();
+                let length = file["length"].as_str().unwrap();
+
+                let file = std::fs::File::open(path)?;
+                let metadata = file.metadata()?;
+                let file_size = metadata.len();
+                let file_size = format!("{}", file_size);
+                if file_size != length {
+                    success(json!({
+                        "check": false,
+                    }));
+                    return Ok(());
+                }
+            }
+
+            success(json!({
+                "check": true,
+            }));
         }
         "file_list" => {
             if args.len() < 3 {
@@ -291,3 +410,4 @@ pub fn error(message: String) {
         "message": message
     }).to_string());
 }
+
