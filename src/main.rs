@@ -149,7 +149,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
             error("not found".to_string());
         }
-        "set-location" => {
+        "set_location" => {
             if args.len() < 4 {
                 error("args error".to_string());
                 return Ok(());
