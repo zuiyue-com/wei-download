@@ -306,6 +306,31 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 error("file not exists".to_string());
             }            
         }
+        "file_list_with_timestamp" => {
+            use std::time::{SystemTime, UNIX_EPOCH};
+
+            let now = SystemTime::now();
+            let since_the_epoch = now.duration_since(UNIX_EPOCH)
+                .expect("Time went backwards");
+            let timestamp = since_the_epoch.as_secs();
+
+            if args.len() < 3 {
+                error("args error".to_string());
+                return Ok(());
+            }
+            let path = args[2].clone();
+            if std::path::Path::new(&path).exists() {
+                let list: serde_json::Value = serde_json::from_str(&wei_hardware::get_file_info(path))?;
+                
+                let data = serde_json::json!({
+                    "list": list,
+                    "time": timestamp
+                });
+                success(data);
+            } else {
+                error("file not exists".to_string());
+            }       
+        }
         "file_delete" => {
             if args.len() < 3 {
                 error("args error".to_string());
