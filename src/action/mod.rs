@@ -104,7 +104,10 @@ pub fn list_data(item: Value) -> Result<Value, Box<dyn std::error::Error>> {
 
     if !item["numSeeders"].is_null() {
         num_seeders = item["numSeeders"].as_str().unwrap();
-        seeder = item["seeder"].as_str().unwrap();
+        seeder = match item["seeder"].as_str() {
+            Some(seeder) => seeder,
+            None => "false",
+        };
     }
     
     let path = item["dir"].as_str().unwrap();
@@ -154,6 +157,7 @@ pub fn follow_add(url: String, search_name: String) -> Result<(), Box<dyn std::e
             return Ok(());
         }
 
+        info!("search_name: {}", search_name);
         let data = wei_run::command("wei-download", vec!["list", search_name.as_str()])?;
         let data: Value = match serde_json::from_str(&data) {
             Ok(data) => data,
@@ -202,9 +206,6 @@ pub fn follow_add(url: String, search_name: String) -> Result<(), Box<dyn std::e
                     return Ok(());
                 }
 
-                
-
-                // 循环获取的过程中，发送上报数据给服务端
                 match ureq::post(&url).send_json(data_return.clone()) {
                     Ok(_) => {}
                     Err(_) => {}

@@ -1,5 +1,5 @@
-// #[macro_use]
-// extern crate wei_log;
+#[macro_use]
+extern crate wei_log;
 
 use serde_json::{Value, json};
 
@@ -41,6 +41,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     "dir": args[3].clone()
                 }]
             });
+
+            info!("add {:?}", args.clone());
 
             if args.len() == 6 { // 上报进度给服务器
                 match ureq::post(&url()).send_json(body) {
