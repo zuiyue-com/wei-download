@@ -6,7 +6,7 @@ use serde_json::{Value, json};
 mod action;
 
 #[cfg(target_os = "windows")]
-static DATA_1: &'static [u8] = include_bytes!("../../wei-release/windows/qbittorrent/qbittorrent.exe");
+static DATA_1: &'static [u8] = include_bytes!("../../wei-release/windows/san/san.txt");
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     #[cfg(target_os = "windows")]
