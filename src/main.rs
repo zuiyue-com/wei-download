@@ -241,8 +241,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     None => "".into()
                 };
                 if name == args[2] {
-                    println!("delete: {}", name);
-                    println!("delete: {}", key);
                     let body = json!({
                         "jsonrpc":"2.0",
                         "method":"aria2.removeDownloadResult",
@@ -254,12 +252,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     });
                     match ureq::post(&url()).send_json(body) {
                         Ok(_) => {}
-                        Err(e) => {
-                            error(e.to_string());
-                            return Ok(());
-                        }
+                        Err(_) => {}
                     };
-                    // send(body.clone());
                 }
             }
             success(json!("success"));
