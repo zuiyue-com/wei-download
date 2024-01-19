@@ -224,6 +224,46 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
             error("not found".to_string());
         }
+        "delete_name" => {
+            if args.len() < 3 {
+                error("args error".to_string());
+                return Ok(());
+            }
+
+            let data = wei_run::run("wei-download", vec!["list_all"])?;
+
+            let data: Value = serde_json::from_str(&data).unwrap();
+            let data = data["data"].as_object().unwrap();
+
+            for (key, value) in data {
+                let name = match value["name"].as_str() {
+                    Some(name) => name,
+                    None => "".into()
+                };
+                if name == args[2] {
+                    println!("delete: {}", name);
+                    println!("delete: {}", key);
+                    let body = json!({
+                        "jsonrpc":"2.0",
+                        "method":"aria2.removeDownloadResult",
+                        "id": id,
+                        "params":[
+                            token(),
+                            key
+                        ]
+                    });
+                    match ureq::post(&url()).send_json(body) {
+                        Ok(_) => {}
+                        Err(e) => {
+                            error(e.to_string());
+                            return Ok(());
+                        }
+                    };
+                    // send(body.clone());
+                }
+            }
+            success(json!("success"));
+        }
         "delete_all" => {
             let body = json!({
                 "jsonrpc":"2.0",
