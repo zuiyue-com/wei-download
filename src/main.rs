@@ -466,10 +466,16 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             let path = std::path::Path::new(&path);
             if path.exists() {
                 if path.is_file() {
-                    std::fs::remove_file(path)?;
+                    match std::fs::remove_file(path) {
+                        Ok(_) => {}
+                        Err(_) => {}
+                    };
                     success(json!("file deleted"));
                 } else if path.is_dir() {
-                    std::fs::remove_dir_all(path)?;
+                    match std::fs::remove_dir_all(path) {
+                        Ok(_) => {}
+                        Err(_) => {}
+                    };
                     success(json!("dir deleted"));
                 }
             } else {
