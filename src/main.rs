@@ -32,27 +32,82 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 error("args error".to_string());
                 return Ok(());
             }
-            
-            let body = json!({
-                "jsonrpc":"2.0",
-                "method":"aria2.addUri",
-                "id": id,
-                "params":[token(),[args[2].clone()],{
-                    "dir": args[3].clone()
-                }]
-            });
 
-            info!("add {:?}", args.clone());
+            let body;
 
-            if args.len() == 6 { // 上报进度给服务器
-                match ureq::post(&url()).send_json(body) {
-                    Ok(_) => {}
+            // 如果是种子链接，先下载种子文件，再添加种子文件
+            if args[2].ends_with(".torrent") {
+                info!("add torrent: {:?}", args.clone());
+                // 使用ureq下载种子文件
+                let res = match ureq::get(&args[2]).call() {
+                    Ok(res) => {res}
                     Err(e) => {
                         error(e.to_string());
                         return Ok(());
                     }
-                }
-                action::follow_add(args[5].clone(),args[4].clone())?;
+                };
+
+                let mut buffer = Vec::new();
+                match res.into_reader().read_to_end(&mut buffer) {
+                    Ok(c) => c,
+                    Err(e) => {
+                        error(e.to_string());
+                        return Ok(());
+                    }
+                };
+
+                let data = base64::encode(&buffer);
+
+                body = json!({
+                    "jsonrpc":"2.0",
+                    "method":"aria2.addTorrent",
+                    "id": id,
+                    "params":[
+                        token(),
+                        data,
+                        [],
+                        {"dir": args[3].clone()}
+                    ]
+                });
+            } else {
+                body = json!({
+                    "jsonrpc":"2.0",
+                    "method":"aria2.addUri",
+                    "id": id,
+                    "params":[token(),[args[2].clone()],{
+                        "dir": args[3].clone()
+                    }]
+                });
+            }
+            
+            info!("add {:?}", args.clone());
+
+            if args.len() == 5 { // 上报进度给服务器
+                let data = match ureq::post(&url()).send_json(body) {
+                    Ok(c) => {c}
+                    Err(e) => {
+                        error(e.to_string());
+                        return Ok(());
+                    }
+                };
+
+                let body: serde_json::Value = match data.into_json() {
+                    Ok(c) => {c}
+                    Err(e) => {
+                        error(e.to_string());
+                        return Ok(());
+                    }
+                };
+
+                let body = match body["result"].as_str() {
+                    Some(c) => {c}
+                    None => {
+                        error("result error".to_string());
+                        return Ok(());
+                    }
+                };
+
+                action::follow_add(args[4].clone(), body.into())?;
             } else {
                 send(body);
             }
@@ -63,7 +118,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 return Ok(());
             }
 
-            let data = base64::encode(std::fs::read(args[2].clone())?);
+            let data = match std::fs::read(&args[2]) {
+                Ok(data) => {data}
+                Err(e) => {
+                    error(e.to_string());
+                    return Ok(());
+                }
+            };
+
+            let data = base64::encode(data);
 
             let body = json!({
                 "jsonrpc":"2.0",
@@ -84,6 +147,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 name = args[2].clone();
             }
             action::list(name)?;
+        }
+        "list_id" => {
+            let mut id = "".to_string();
+            if args.len() > 2 {
+                id = args[2].clone();
+            }
+            action::list_id(id)?;
         }
         "list_all" => {
             action::list_all()?;
@@ -119,7 +189,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
             for (key, value) in data {
                 if key == &args[2] {
-                    let body = json!({
+                    let mut body = json!({
                         "jsonrpc":"2.0",
                         "method":"aria2.forceRemove",
                         "id": id,
@@ -128,6 +198,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                             key
                         ]
                     });
+                    send(body.clone());
+
+                    body["method"] = "aria2.removeDownloadResult".into();
                     send(body);
 
                     let files = value["files"].as_array().unwrap();

@@ -1,5 +1,26 @@
 use serde_json::{Value, json};
 
+pub fn list_id(id: String) -> Result<(), Box<dyn std::error::Error>> {
+    let body = match list_body() {
+        Ok(body) => body,
+        Err(e) => {
+            crate::error(e.to_string());
+            return Ok(());
+        }
+    };
+
+    for (_,item) in body.as_object().unwrap() {
+        if item["gid"].as_str().unwrap_or("no_gid") == &id {
+            crate::success(item.clone());
+            return Ok(());
+        }
+    }
+
+    crate::success(json!({}));
+
+    Ok(())
+}
+
 pub fn list(search_name: String) -> Result<(), Box<dyn std::error::Error>> {
     let body = match list_body() {
         Ok(body) => body,
@@ -11,10 +32,20 @@ pub fn list(search_name: String) -> Result<(), Box<dyn std::error::Error>> {
 
     for (_,item) in body.as_object().unwrap() {
         if item["name"].as_str().unwrap_or("no_name") == &search_name {
+            if item["status"].as_str().unwrap_or("no_status") == "active" {
+                crate::success(item.clone());
+                return Ok(());
+            }
+        }
+    }
+
+    for (_,item) in body.as_object().unwrap() {
+        if item["name"].as_str().unwrap_or("no_name") == &search_name {
             crate::success(item.clone());
             return Ok(());
         }
     }
+
     crate::success(json!({}));
 
     Ok(())
@@ -91,7 +122,21 @@ pub fn list_data(item: Value) -> Result<Value, Box<dyn std::error::Error>> {
     } else {
         let path = item["files"][0]["path"].as_str().unwrap();
         let path = std::path::Path::new(path);
-        name = path.file_name().unwrap().to_str().unwrap();
+        if path.display().to_string() != "" {
+            name = path.file_name().unwrap().to_str().unwrap();
+        } else {
+            let uri = match item["files"][0]["uris"][0]["uri"].as_str() {
+                Some(uri) => uri,
+                None => "",
+            };
+
+            if uri == "" {
+                name = "";
+            } else {
+                let uri = std::path::Path::new(uri);
+                name = uri.file_name().unwrap().to_str().unwrap();
+            }
+        }
     }
     let mut info_hash = "";
 
@@ -134,17 +179,17 @@ pub fn list_data(item: Value) -> Result<Value, Box<dyn std::error::Error>> {
     Ok(data)
 }
 
-pub fn follow_add(url: String, search_name: String) -> Result<(), Box<dyn std::error::Error>> {
+pub fn follow_add(url: String, gid: String) -> Result<(), Box<dyn std::error::Error>> {
     // 先获取gid
     let mut i = 0;
     let mut data_return: Value;
     let sleep_time = 1;
 
-    let mut gid;
     let mut name: String = "".to_string();
     let mut status;
     let mut completed_length;
     let mut total_length;
+
 
     // 一直都是空名，则退出，空名字60秒以上则退出
     // 如果是完成/停止/等待状态则退出，返回结果
@@ -157,8 +202,8 @@ pub fn follow_add(url: String, search_name: String) -> Result<(), Box<dyn std::e
             return Ok(());
         }
 
-        info!("search_name: {}", search_name);
-        let data = wei_run::command("wei-download", vec!["list", search_name.as_str()])?;
+        info!("gid: {}", gid);
+        let data = wei_run::command("wei-download", vec!["list_id", &gid])?;
         let data: Value = match serde_json::from_str(&data) {
             Ok(data) => data,
             Err(_) => {
@@ -176,7 +221,6 @@ pub fn follow_add(url: String, search_name: String) -> Result<(), Box<dyn std::e
             Some(data) => {
                 i = 0;
 
-                gid = data.get("gid").map_or("", |v| v.as_str().unwrap_or_default());
                 name = data.get("name").map_or("", |v| v.as_str().unwrap_or_default()).to_string();
                 status = data.get("status").map_or("", |v| v.as_str().unwrap_or_default());
                 completed_length = data.get("completed_length").map_or("", |v| v.as_str().unwrap_or_default());
@@ -201,7 +245,8 @@ pub fn follow_add(url: String, search_name: String) -> Result<(), Box<dyn std::e
 
                 if completed_length == total_length &&
                    completed_length != "" && 
-                   total_length != "" {
+                   total_length != "" &&
+                   completed_length != "0" {
                     crate::success(data_return);
                     return Ok(());
                 }
