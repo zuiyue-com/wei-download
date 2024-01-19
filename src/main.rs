@@ -224,6 +224,17 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
             error("not found".to_string());
         }
+        "delete_all" => {
+            let body = json!({
+                "jsonrpc":"2.0",
+                "method":"aria2.purgeDownloadResult",
+                "id": id,
+                "params":[
+                    token()
+                ]
+            });
+            send(body);
+        }
         "set_location" => {
             if args.len() < 4 {
                 error("args error".to_string());
