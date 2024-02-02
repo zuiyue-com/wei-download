@@ -12,6 +12,7 @@ wei-run = "0.2.5"
 wei-env = "0.2.13"
 wei-log = "0.2.10"
 wei-hardware = { path="../wei-hardware" }
+wei-windows = { path = "../wei-windows" }
 serde = "1"
 serde_json = "1"
 serde_derive = "1"
