@@ -485,7 +485,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 fn start() -> Result<(), Box<dyn std::error::Error>> {
     use single_instance::SingleInstance;
-    let instance = SingleInstance::new("wei-download").unwrap();
+    let instance = wei_single::SingleInstance::new("wei-download").unwrap();
     if !instance.is_single() { 
         std::process::exit(1);
     };
