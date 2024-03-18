@@ -489,13 +489,20 @@ fn start() -> Result<(), Box<dyn std::error::Error>> {
         std::process::exit(1);
     };
 
+    wei_run::kill("aria2c")?;
+
     // 判断文件是否存在 ./aria2/aria2.session, 如果不存在则创建
     let path = std::path::Path::new("./aria2/aria2.session");
     if !path.exists() {
         std::fs::File::create(&path)?;
     }
 
-    match wei_run::command("./aria2/aria2c.exe", vec!["--conf-path=./aria2/aria2.conf"]) {
+    #[cfg(target_os = "windows")]
+    let aria2c = "./aria2/aria2c.exe";
+    #[cfg(target_os = "linux")]
+    let aria2c = "aria2c";
+
+    match wei_run::command(aria2c, vec!["--conf-path=./aria2/aria2.conf"]) {
         Ok(data) => {
             success(json!(data));
         }
