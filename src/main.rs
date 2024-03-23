@@ -500,7 +500,7 @@ fn start() -> Result<(), Box<dyn std::error::Error>> {
     #[cfg(target_os = "windows")]
     let aria2c = "./aria2/aria2c.exe";
     #[cfg(target_os = "linux")]
-    let aria2c = "aria2c";
+    let aria2c = "./aria2/aria2c";
 
     match wei_run::command(aria2c, vec!["--conf-path=./aria2/aria2.conf"]) {
         Ok(data) => {
