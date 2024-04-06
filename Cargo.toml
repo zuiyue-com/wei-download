@@ -22,3 +22,4 @@ ureq = { version = "2.9.1", features = ["json"] }
 regex = "1.10.2"
 lava_torrent = "0.11.1"
 # sha-1 = "0.9.8"
+
