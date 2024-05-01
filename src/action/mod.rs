@@ -115,10 +115,20 @@ pub fn list_data(item: Value) -> Result<Value, Box<dyn std::error::Error>> {
 
     let name;
 
+    info!("gid: {}", gid);
+    info!("item: {}", item.to_string());
+
     if !item["bittorrent"].is_null() {
         let bittorrent = item["bittorrent"].as_object().unwrap();
-        let info = bittorrent["info"].as_object().unwrap();
-        name = info["name"].as_str().unwrap();
+        // 如果没有info字段，则使用gid作为名字
+    
+
+        if bittorrent.contains_key("info") == false {
+            name = gid;
+        } else {
+            let info = bittorrent["info"].as_object().unwrap();
+            name = info["name"].as_str().unwrap();
+        }
     } else {
         let path = item["files"][0]["path"].as_str().unwrap();
         let path = std::path::Path::new(path);

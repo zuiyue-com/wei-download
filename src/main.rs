@@ -153,6 +153,17 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         "list_all" => {
             action::list_all()?;
         }
+        "stop_all" => {
+            let body = json!({
+                "jsonrpc":"2.0",
+                "method":"aria2.pauseAll",
+                "id": id,
+                "params":[
+                    token()
+                ]
+            });
+            send(body);
+        }
         "stop" => {
             if args.len() < 3 {
                 error("args error".to_string());
