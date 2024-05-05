@@ -495,32 +495,53 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 fn start() -> Result<(), Box<dyn std::error::Error>> {
+    info!("start");
     let instance = wei_single::SingleInstance::new("wei-download").unwrap();
     if !instance.is_single() { 
         std::process::exit(1);
     };
 
+    info!("kill aria2c");
     wei_run::kill("aria2c")?;
 
-    // 判断文件是否存在 ./aria2/aria2.session, 如果不存在则创建
+    // 判断文件是否存在 ./aria2/aria2.session, 
+    info!("create aria2.session");
     let path = std::path::Path::new("./aria2/aria2.session");
     if !path.exists() {
         std::fs::File::create(&path)?;
     }
 
-    #[cfg(target_os = "windows")]
-    let aria2c = "./aria2/aria2c.exe";
-    #[cfg(target_os = "linux")]
-    let aria2c = "./aria2/aria2c";
+    #[cfg(target_os = "windows")] {
+        let aria2c = "./aria2/aria2c.exe";
+        match wei_run::command(aria2c, vec!["--conf-path=./aria2/aria2.conf"]) {
+            Ok(data) => {
+                success(json!(data));
+            }
+            Err(e) => {
+                error(e.to_string());
+            }
+        };
+    }
+    
+    info!("start aria2c");
+    #[cfg(target_os = "linux")] {
+        let aria2c = "./aria2/aria2c";
 
-    match wei_run::command(aria2c, vec!["--conf-path=./aria2/aria2.conf"]) {
-        Ok(data) => {
-            success(json!(data));
+        let output = std::process::Command::new(aria2c)
+            .arg("--conf-path=./aria2/aria2.conf")
+            .env("LD_LIBRARY_PATH", "./aria2/")
+            .output()
+            .expect("Failed to execute command");
+
+        if output.status.success() {
+            let s = String::from_utf8_lossy(&output.stdout);
+            info!("Success: {}", s);
+        } else {
+            let s = String::from_utf8_lossy(&output.stderr);
+            info!("Error: {}", s);
         }
-        Err(e) => {
-            error(e.to_string());
-        }
-    };
+    }
+
     Ok(())
 }
 
